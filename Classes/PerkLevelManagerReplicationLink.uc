@@ -29,7 +29,7 @@ simulated function PostBeginPlay()
 
 reliable client function NotifyChangeLevel(byte CurrentPerkLevel, byte CurrentPrestigeLevel, byte NewPerkLevel, byte NewPrestigeLevel)
 {
-    `Log("[PerkLevelManager] Updating to (" $ NewPrestigeLevel $ "," @ NewPerkLevel $ ")");
+    `Log("[PerkLevelManager] Updating level from (" $ CurrentPrestigeLevel $ "," @ CurrentPerkLevel $ ") to (" $ NewPrestigeLevel $ "," @ NewPerkLevel $ ")");
 
     PerkLevel = NewPerkLevel;
     PrestigeLevel = NewPrestigeLevel;
@@ -108,10 +108,12 @@ simulated function UpdateSkills()
     local bool CanUpdateSkills;
     local int I;
 
+    if (KFPC.CurrentPerk == None) return;
+
     KFPC.CurrentPerk.SetLevel(PerkLevel);
     KFPC.CurrentPerk.SetPrestigeLevel(PrestigeLevel);
 
-    UnlockedTier = PerkLevel / 5;
+    UnlockedTier = PerkLevel / class'PerkLevelManager.PerkLevelManagerMutator'.const.LEVELS_PER_TIER;
 
     KFPerkProxy = CastPerkProxy(KFPC.CurrentPerk);
     if (KFPerkProxy == None) return;
@@ -129,6 +131,7 @@ simulated function UpdateSkills()
 
     if (ShouldUpdateSkills && CanUpdateSkills)
     {
+        `Log("[PerkLevelManager] Illegal skills detected; updating.");
         KFPC.CurrentPerk.UpdateSkills();
         ShouldUpdateSkills = false;
     }

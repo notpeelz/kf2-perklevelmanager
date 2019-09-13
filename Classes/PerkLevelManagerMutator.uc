@@ -8,6 +8,9 @@ struct ClientEntry
     var bool ShouldUpdateSkills;
 };
 
+const LEVELS_PER_TIER = 5;
+
+var PerkLevelManagerConfig PLMConfig;
 var array<ClientEntry> Clients;
 var Name GameStateName;
 var byte PrestigeLevel;
@@ -23,7 +26,11 @@ simulated function PostBeginPlay()
 {
     if (Role == ROLE_Authority)
     {
+        PLMConfig = new class'PerkLevelManager.PerkLevelManagerConfig';
+        PLMConfig.Initialize();
+
         SetTimer(1.f, true, nameof(UpdateInfo));
+
         `Log("[PerkLevelManager] Initialized");
     }
 }
@@ -41,15 +48,15 @@ function UpdateInfo()
         GameStateName = MYKFGI.GetStateName();
     }
 
-    ExpectedPerkLevel = 5;
-    ExpectedPrestigeLevel = 4;
-    UnlockedTier = ExpectedPerkLevel / 5;
-
     foreach Clients(Client)
     {
+        ExpectedPerkLevel = PLMConfig.GetPerkLevel(Client.PRIProxy.ActivePerkLevel);
+        ExpectedPrestigeLevel = PLMConfig.GetPrestigeLevel(Client.PRIProxy.ActivePerkPrestigeLevel);
+        UnlockedTier = ExpectedPerkLevel / LEVELS_PER_TIER;
+
         if (Client.PRIProxy.ActivePerkLevel != ExpectedPerkLevel || Client.PRIProxy.ActivePerkPrestigeLevel != ExpectedPrestigeLevel)
         {
-            `Log("[PerkLevelManager] Client" @ Client.KFPC.PlayerReplicationInfo.PlayerName @ "doesn't match the expected level, updating.");
+            `Log("[PerkLevelManager] Client" @ Client.KFPC.PlayerReplicationInfo.PlayerName @ "doesn't match the expected level; updating levels.");
 
             Client.RepLink.NotifyChangeLevel(
                 Client.PRIProxy.ActivePerkLevel, Client.PRIProxy.ActivePerkPrestigeLevel,
@@ -81,6 +88,7 @@ function UpdateInfo()
 
             if (Client.ShouldUpdateSkills && CanUpdateSkills())
             {
+                `Log("[PerkLevelManager] Client" @ Client.KFPC.PlayerReplicationInfo.PlayerName @ "has illegal skills; updating skills.");
                 Client.KFPC.CurrentPerk.UpdateSkills();
                 CLient.ShouldUpdateSkills = false;
             }
