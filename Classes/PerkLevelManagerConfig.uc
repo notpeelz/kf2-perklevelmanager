@@ -1,4 +1,4 @@
-class PerkLevelManagerConfig extends Object
+class PerkLevelManagerConfig extends Actor
     config(PerkLevelManager);
 
 struct LevelOverride
@@ -8,9 +8,23 @@ struct LevelOverride
     var int Max;
 };
 
+struct PerkOverride
+{
+    var Class<KFPerk> PerkClass;
+    var LevelOverride Override;
+};
+
 var config int INIVersion;
 var config LevelOverride PerkLevel;
 var config LevelOverride PrestigeLevel;
+var config array<PerkOverride> PerkLevelOverrides;
+var config array<PerkOverride> PrestigeLevelOverrides;
+
+replication
+{
+    if (bNetDirty)
+        PerkLevel, PrestigeLevel;
+}
 
 function Initialize()
 {
@@ -30,50 +44,79 @@ function Initialize()
     }
 }
 
-function int GetPerkLevel(int CurrentValue)
+simulated function int GetPerkLevel(int CurrentValue, Class<KFPerk> PerkClass)
 {
     local int Value;
+    local LevelOverride Override;
+    local PerkOverride CurrentPerkOverride;
 
-    if (PerkLevel.Value < 0)
+    Override = PerkLevel;
+    foreach PerkLevelOverrides(CurrentPerkOverride)
+    {
+        if (PerkClass == CurrentPerkOverride.PerkClass)
+        {
+            Override = CurrentPerkOverride.Override;
+        }
+    }
+
+    if (Override.Value < 0)
     {
         Value = CurrentValue;
 
-        if (PerkLevel.Min >= 0)
+        if (Override.Min >= 0)
         {
-            Value = Max(Value, PerkLevel.Min);
+            Value = Max(Value, Override.Min);
         }
 
-        if (PerkLevel.Max >= 0)
+        if (Override.Max >= 0)
         {
-            Value = Min(Value, PerkLevel.Max);
+            Value = Min(Value, Override.Max);
         }
 
         return Value;
     }
 
-    return PerkLevel.Value;
+    return Override.Value;
 }
 
-function int GetPrestigeLevel(int CurrentValue)
+simulated function int GetPrestigeLevel(int CurrentValue, Class<KFPerk> PerkClass)
 {
     local int Value;
+    local LevelOverride Override;
+    local PerkOverride CurrentPerkOverride;
 
-    if (PrestigeLevel.Value < 0)
+    Override = PrestigeLevel;
+    foreach PrestigeLevelOverrides(CurrentPerkOverride)
+    {
+        if (PerkClass == CurrentPerkOverride.PerkClass)
+        {
+            Override = CurrentPerkOverride.Override;
+        }
+    }
+
+    if (Override.Value < 0)
     {
         Value = CurrentValue;
 
-        if (PrestigeLevel.Min >= 0)
+        if (Override.Min >= 0)
         {
-            Value = Max(Value, PrestigeLevel.Min);
+            Value = Max(Value, Override.Min);
         }
 
-        if (PrestigeLevel.Max >= 0)
+        if (Override.Max >= 0)
         {
-            Value = Min(Value, PrestigeLevel.Max);
+            Value = Min(Value, Override.Max);
         }
 
         return Value;
     }
 
-    return PrestigeLevel.Value;
+    return Override.Value;
+}
+
+defaultproperties
+{
+    Role = ROLE_Authority;
+    RemoteRole = ROLE_SimulatedProxy;
+    bAlwaysRelevant = true;
 }

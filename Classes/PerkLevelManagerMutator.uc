@@ -1,4 +1,5 @@
-class PerkLevelManagerMutator extends KFMutator;
+class PerkLevelManagerMutator extends KFMutator
+    dependson(PerkLevelManagerConfig);
 
 struct ClientEntry
 {
@@ -18,14 +19,14 @@ var byte PerkLevel;
 replication
 {
     if (bNetDirty)
-        GameStateName;
+        PLMConfig, GameStateName;
 }
 
 simulated function PostBeginPlay()
 {
     if (Role == ROLE_Authority)
     {
-        PLMConfig = new class'PerkLevelManager.PerkLevelManagerConfig';
+        PLMConfig = Spawn(class'PerkLevelManager.PerkLevelManagerConfig', Self);
         PLMConfig.Initialize();
 
         SetTimer(1.f, true, nameof(UpdateInfo));
@@ -51,8 +52,8 @@ function UpdateInfo()
     {
         if (Client.KFPC.CurrentPerk == None || Client.KFPC.bWaitingForClientPerkData) continue;
 
-        ExpectedPerkLevel = PLMConfig.GetPerkLevel(Client.PRIProxy.ActivePerkLevel);
-        ExpectedPrestigeLevel = PLMConfig.GetPrestigeLevel(Client.PRIProxy.ActivePerkPrestigeLevel);
+        ExpectedPerkLevel = PLMConfig.GetPerkLevel(Client.PRIProxy.ActivePerkLevel, Client.KFPC.CurrentPerk.Class);
+        ExpectedPrestigeLevel = PLMConfig.GetPrestigeLevel(Client.PRIProxy.ActivePerkPrestigeLevel, Client.KFPC.CurrentPerk.Class);
         UnlockedTier = ExpectedPerkLevel / `MAX_PERK_SKILLS;
 
         if (Client.PRIProxy.ActivePerkLevel != ExpectedPerkLevel || Client.PRIProxy.ActivePerkPrestigeLevel != ExpectedPrestigeLevel)
@@ -115,8 +116,7 @@ function NotifyLogin(Controller NewPlayer)
     {
         NewClient.PRIProxy = CastPRIProxy(NewPlayer.PlayerReplicationInfo);
         NewClient.KFPC = NewKFPC;
-        NewClient.RepLink = Spawn(class'PerkLevelManager.PerkLevelManagerReplicationLink', NewKFPC);
-        NewClient.RepLink.PLMMutator = Self;
+        NewClient.RepLink = CreateRepLink(NewKFPC);
         Clients.AddItem(NewClient);
     }
 
@@ -139,6 +139,16 @@ function NotifyLogout(Controller Exiting)
     }
 
     super.NotifyLogout(Exiting);
+}
+
+function PerkLevelManagerReplicationLink CreateRepLink(KFPlayerController KFPC)
+{
+    local PerkLevelManagerReplicationLink RepLink;
+
+    RepLink = Spawn(class'PerkLevelManager.PerkLevelManagerReplicationLink', KFPC);
+    RepLink.PLMMutator = Self;
+
+    return RepLink;
 }
 
 `ForcedObjectTypecastFunction(KFPlayerReplicationInfoProxy, CastPRIProxy)

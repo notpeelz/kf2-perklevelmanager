@@ -1,4 +1,11 @@
-class PerkLevelManagerReplicationLink extends ReplicationInfo;
+class PerkLevelManagerReplicationLink extends ReplicationInfo
+    dependson(PerkLevelManagerConfig);
+
+struct PerkListCacheEntry
+{
+    var byte PerkLevel;
+    var byte PrestigeLevel;
+};
 
 var PerkLevelManagerMutator PLMMutator;
 
@@ -13,6 +20,10 @@ var bool ShouldUpdateSkills;
 var byte PerkLevel;
 var byte PrestigeLevel;
 
+var array<PerkLevelManagerConfig.PerkOverride> TempPerkLevelOverrides;
+var array<PerkLevelManagerConfig.PerkOverride> TempPrestigeLevelOverrides;
+var array<PerkListCacheEntry> PerkListCache;
+
 replication
 {
     if (bNetDirty)
@@ -25,6 +36,32 @@ simulated function PostBeginPlay()
     {
         SetTimer(1.f, true, nameof(UpdateSkills));
     }
+
+    if (WorldInfo.NetMode != NM_Client)
+    {
+        SyncConfig();
+    }
+}
+
+function SyncConfig()
+{
+    local PerkLevelManagerConfig.PerkOverride CurrentPerkOverride;
+
+    if (PLMMutator == None)
+    {
+        SetTimer(0.01f, false, nameof(SyncConfig));
+        return;
+    }
+
+    foreach PLMMutator.PLMConfig.PerkLevelOverrides(CurrentPerkOverride)
+    {
+        AddLevelPerkOverride(CurrentPerkOverride);
+    }
+
+    foreach PLMMutator.PLMConfig.PrestigeLevelOverrides(CurrentPerkOverride)
+    {
+        AddPrestigePerkOverride(CurrentPerkOverride);
+    }
 }
 
 reliable client function NotifyChangeLevel(byte CurrentPerkLevel, byte CurrentPrestigeLevel, byte NewPerkLevel, byte NewPrestigeLevel)
@@ -35,6 +72,57 @@ reliable client function NotifyChangeLevel(byte CurrentPerkLevel, byte CurrentPr
     PrestigeLevel = NewPrestigeLevel;
 
     QueueUpdate();
+}
+
+reliable client function AddLevelPerkOverride(PerkLevelManagerConfig.PerkOverride Override)
+{
+    if (PLMMutator == None)
+    {
+        TempPerkLevelOverrides.AddItem(Override);
+        UpdateConfig();
+    }
+    else
+    {
+        PLMMutator.PLMConfig.PerkLevelOverrides.AddItem(Override);
+    }
+}
+
+reliable client function AddPrestigePerkOverride(PerkLevelManagerConfig.PerkOverride Override)
+{
+    if (PLMMutator == None || PLMMutator.PLMConfig == None)
+    {
+        TempPrestigeLevelOverrides.AddItem(Override);
+        UpdateConfig();
+    }
+    else
+    {
+        PLMMutator.PLMConfig.PrestigeLevelOverrides.AddItem(Override);
+    }
+}
+
+simulated function UpdateConfig()
+{
+    local PerkLevelManagerConfig.PerkOverride CurrentPerkOverride;
+
+    if (PLMMutator == None || PLMMutator.PLMConfig == None)
+    {
+        ClearTimer(nameof(UpdateConfig));
+        SetTimer(0.01f, false, nameof(UpdateConfig));
+        return;
+    }
+
+    foreach TempPerkLevelOverrides(CurrentPerkOverride)
+    {
+        PLMMutator.PLMConfig.PerkLevelOverrides.AddItem(CurrentPerkOverride);
+    }
+
+    foreach TempPrestigeLevelOverrides(CurrentPerkOverride)
+    {
+        PLMMutator.PLMConfig.PrestigeLevelOverrides.AddItem(CurrentPerkOverride);
+    }
+
+    TempPerkLevelOverrides.Length = 0;
+    TempPrestigeLevelOverrides.Length = 0;
 }
 
 simulated function QueueUpdate()
@@ -73,7 +161,9 @@ simulated event Tick(float DeltaTime)
 simulated function UpdateLevelInfo()
 {
     local KFGFxMenu_Perks PerkMenu;
-    local KFPlayerController.PerkInfo PerkInfo;
+    local KFPlayerController.PerkInfo CurrentPerkInfo;
+    local PerkListCacheEntry CacheEntry;
+    local int PerkIndex;
     local int I;
 
     if (!CacheVariables()) return;
@@ -81,10 +171,21 @@ simulated function UpdateLevelInfo()
     KFPC.CurrentPerk.SetLevel(PerkLevel);
     KFPC.CurrentPerk.SetPrestigeLevel(PrestigeLevel);
 
+    if (PerkListCache.Length == 0)
+    {
+        foreach KFPC.PerkList(CurrentPerkInfo)
+        {
+            CacheEntry.PerkLevel = CurrentPerkInfo.PerkLevel;
+            CacheEntry.PrestigeLevel = CurrentPerkInfo.PrestigeLevel;
+            PerkListCache.AddItem(CacheEntry);
+        }
+    }
+
     for (I = 0; I < KFPC.PerkList.Length; I++)
     {
-        KFPC.PerkList[KFPC.GetPerkIndexFromClass(KFPC.PerkList[I].PerkClass)].PerkLevel = PerkLevel;
-        KFPC.PerkList[KFPC.GetPerkIndexFromClass(KFPC.PerkList[I].PerkClass)].PrestigeLevel = PrestigeLevel;
+        PerkIndex = KFPC.GetPerkIndexFromClass(KFPC.PerkList[I].PerkClass);
+        KFPC.PerkList[PerkIndex].PerkLevel = PLMMutator.PLMConfig.GetPerkLevel(PerkListCache[PerkIndex].PerkLevel, KFPC.PerkList[PerkIndex].PerkClass);
+        KFPC.PerkList[PerkIndex].PrestigeLevel = PLMMutator.PLMConfig.GetPrestigeLevel(PerkListCache[PerkIndex].PrestigeLevel, KFPC.PerkList[PerkIndex].PerkClass);
     }
 
     KFPC.PostTierUnlock(KFPC.PerkList[KFPC.SavedPerkIndex].PerkClass);
@@ -96,10 +197,10 @@ simulated function UpdateLevelInfo()
         PerkMenu.UpdateContainers(KFPC.PerkList[KFPC.SavedPerkIndex].PerkClass, false);
     }
 
-    foreach KFPC.PerkList(PerkInfo)
+    foreach KFPC.PerkList(CurrentPerkInfo)
     {
-        PerkInfo.PerkLevel = PerkLevel;
-        PerkInfo.PrestigeLevel = PrestigeLevel;
+        CurrentPerkInfo.PerkLevel = PerkLevel;
+        CurrentPerkInfo.PrestigeLevel = PrestigeLevel;
     }
 
     UpdateSkills();
