@@ -209,7 +209,6 @@ simulated function UpdateLevelInfo()
 simulated function UpdateSkills()
 {
     local int UnlockedTier;
-    local bool CanUpdateSkills;
     local int I;
 
     if (KFPC.CurrentPerk == None) return;
@@ -218,8 +217,6 @@ simulated function UpdateSkills()
 
     KFPerkProxy = CastPerkProxy(KFPC.CurrentPerk);
     if (KFPerkProxy == None) return;
-
-    CanUpdateSkills = PLMMutator.CanUpdateSkills();
 
     for (I = 0; I < `MAX_PERK_SKILLS; I++)
     {
@@ -230,7 +227,7 @@ simulated function UpdateSkills()
         }
     }
 
-    if (ShouldUpdateSkills && CanUpdateSkills)
+    if (ShouldUpdateSkills && PLMMutator.CanUpdateSkills())
     {
         `Log("[PerkLevelManager] Illegal skills detected; updating.");
         KFPC.CurrentPerk.UpdateSkills();

@@ -7,7 +7,6 @@ struct ClientEntry
     var KFPlayerController KFPC;
     var PerkLevelManagerReplicationLink RepLink;
     var bool ShouldUpdateSkills;
-    var bool ShouldUpdatePerkInfo;
 };
 
 var PerkLevelManagerConfig PLMConfig;
@@ -65,17 +64,11 @@ function UpdateInfo()
                 ExpectedPerkLevel, ExpectedPrestigeLevel
             );
 
-            Client.PRIProxy.ActivePerkLevel = ExpectedPerkLevel;
-            Client.PRIProxy.ActivePerkPrestigeLevel = ExpectedPrestigeLevel;
-
-            Client.ShouldUpdatePerkInfo = true;
-        }
-
-        if (Client.ShouldUpdatePerkInfo)
-        {
             Client.KFPC.CurrentPerk.SetLevel(ExpectedPerkLevel);
             Client.KFPC.CurrentPerk.SetPrestigeLevel(ExpectedPrestigeLevel);
-            Client.ShouldUpdatePerkInfo = false;
+
+            Client.PRIProxy.ActivePerkLevel = ExpectedPerkLevel;
+            Client.PRIProxy.ActivePerkPrestigeLevel = ExpectedPrestigeLevel;
         }
 
         KFPerkProxy = CastPerkProxy(Client.KFPC.CurrentPerk);
@@ -125,17 +118,12 @@ function NotifyLogin(Controller NewPlayer)
 
 function NotifyLogout(Controller Exiting)
 {
-    local ClientEntry Client;
-    local int I;
+    local int ClientIndex;
 
-    for (I = 0; I < Clients.Length; I++)
+    ClientIndex = Clients.Find('KFPC', KFPlayerController(Exiting));
+    if (ClientIndex != INDEX_NONE)
     {
-        Client = Clients[I];
-
-        if (Client.KFPC == Exiting)
-        {
-            Clients.Remove(I, 1);
-        }
+        Clients.Remove(ClientIndex, 1);
     }
 
     super.NotifyLogout(Exiting);
