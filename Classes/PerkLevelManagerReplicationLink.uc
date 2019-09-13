@@ -57,7 +57,7 @@ simulated event Tick(float DeltaTime)
     {
         if (CacheVariables())
         {
-            if (KFPC.MyGFxHUD.PlayerStatusContainer == None || KFPC.CurrentPerk == None) return;
+            if (KFPC.CurrentPerk == None) return;
 
             if (ShouldUpdate)
             {
@@ -77,6 +77,9 @@ simulated function UpdateLevelInfo()
     local int I;
 
     if (!CacheVariables()) return;
+
+    KFPC.CurrentPerk.SetLevel(PerkLevel);
+    KFPC.CurrentPerk.SetPrestigeLevel(PrestigeLevel);
 
     for (I = 0; I < KFPC.PerkList.Length; I++)
     {
@@ -110,10 +113,7 @@ simulated function UpdateSkills()
 
     if (KFPC.CurrentPerk == None) return;
 
-    KFPC.CurrentPerk.SetLevel(PerkLevel);
-    KFPC.CurrentPerk.SetPrestigeLevel(PrestigeLevel);
-
-    UnlockedTier = PerkLevel / class'PerkLevelManager.PerkLevelManagerMutator'.const.LEVELS_PER_TIER;
+    UnlockedTier = KFPRIProxy.ActivePerkLevel / `MAX_PERK_SKILLS;
 
     KFPerkProxy = CastPerkProxy(KFPC.CurrentPerk);
     if (KFPerkProxy == None) return;

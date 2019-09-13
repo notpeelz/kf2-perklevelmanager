@@ -6,9 +6,8 @@ struct ClientEntry
     var KFPlayerController KFPC;
     var PerkLevelManagerReplicationLink RepLink;
     var bool ShouldUpdateSkills;
+    var bool ShouldUpdatePerkInfo;
 };
-
-const LEVELS_PER_TIER = 5;
 
 var PerkLevelManagerConfig PLMConfig;
 var array<ClientEntry> Clients;
@@ -50,9 +49,11 @@ function UpdateInfo()
 
     foreach Clients(Client)
     {
+        if (Client.KFPC.CurrentPerk == None || Client.KFPC.bWaitingForClientPerkData) continue;
+
         ExpectedPerkLevel = PLMConfig.GetPerkLevel(Client.PRIProxy.ActivePerkLevel);
         ExpectedPrestigeLevel = PLMConfig.GetPrestigeLevel(Client.PRIProxy.ActivePerkPrestigeLevel);
-        UnlockedTier = ExpectedPerkLevel / LEVELS_PER_TIER;
+        UnlockedTier = ExpectedPerkLevel / `MAX_PERK_SKILLS;
 
         if (Client.PRIProxy.ActivePerkLevel != ExpectedPerkLevel || Client.PRIProxy.ActivePerkPrestigeLevel != ExpectedPrestigeLevel)
         {
@@ -65,33 +66,36 @@ function UpdateInfo()
 
             Client.PRIProxy.ActivePerkLevel = ExpectedPerkLevel;
             Client.PRIProxy.ActivePerkPrestigeLevel = ExpectedPrestigeLevel;
+
+            Client.ShouldUpdatePerkInfo = true;
         }
 
-        if (Client.KFPC.CurrentPerk != None)
+        if (Client.ShouldUpdatePerkInfo)
         {
             Client.KFPC.CurrentPerk.SetLevel(ExpectedPerkLevel);
             Client.KFPC.CurrentPerk.SetPrestigeLevel(ExpectedPrestigeLevel);
+            Client.ShouldUpdatePerkInfo = false;
+        }
 
-            KFPerkProxy = CastPerkProxy(Client.KFPC.CurrentPerk);
+        KFPerkProxy = CastPerkProxy(Client.KFPC.CurrentPerk);
 
-            if (KFPerkProxy != None)
+        if (KFPerkProxy != None)
+        {
+            for (I = 0; I < `MAX_PERK_SKILLS; I++)
             {
-                for (I = 0; I < `MAX_PERK_SKILLS; I++)
+                if (I >= UnlockedTier)
                 {
-                    if (I >= UnlockedTier)
-                    {
-                        if (KFPerkProxy.SelectedSkills[I] != 0) Client.ShouldUpdateSkills = true;
-                        KFPerkProxy.SelectedSkills[I] = 0;
-                    }
+                    if (KFPerkProxy.SelectedSkills[I] != 0) Client.ShouldUpdateSkills = true;
+                    KFPerkProxy.SelectedSkills[I] = 0;
                 }
             }
+        }
 
-            if (Client.ShouldUpdateSkills && CanUpdateSkills())
-            {
-                `Log("[PerkLevelManager] Client" @ Client.KFPC.PlayerReplicationInfo.PlayerName @ "has illegal skills; updating skills.");
-                Client.KFPC.CurrentPerk.UpdateSkills();
-                CLient.ShouldUpdateSkills = false;
-            }
+        if (Client.ShouldUpdateSkills && CanUpdateSkills())
+        {
+            `Log("[PerkLevelManager] Client" @ Client.KFPC.PlayerReplicationInfo.PlayerName @ "has illegal skills; updating skills.");
+            Client.KFPC.CurrentPerk.UpdateSkills();
+            CLient.ShouldUpdateSkills = false;
         }
     }
 }
