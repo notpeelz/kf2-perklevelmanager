@@ -141,21 +141,15 @@ simulated function QueueUpdate()
 
 simulated event Tick(float DeltaTime)
 {
-    if (WorldInfo.NetMode != NM_DedicatedServer)
+    if (WorldInfo.NetMode == NM_DedicatedServer) return;
+    if (!CacheVariables()) return;
+    if (KFPC.CurrentPerk == None) return;
+
+    if (ShouldUpdate)
     {
-        if (CacheVariables())
-        {
-            if (KFPC.CurrentPerk == None) return;
-
-            if (ShouldUpdate)
-            {
-                UpdateLevelInfo();
-                ShouldUpdate = false;
-            }
-        }
+        UpdateLevelInfo();
+        ShouldUpdate = false;
     }
-
-    super.tick(DeltaTime);
 }
 
 simulated function UpdateLevelInfo()
