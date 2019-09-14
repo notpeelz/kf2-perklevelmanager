@@ -160,8 +160,6 @@ simulated function UpdateLevelInfo()
     local int PerkIndex;
     local int I;
 
-    if (!CacheVariables()) return;
-
     KFPC.CurrentPerk.SetLevel(PerkLevel);
     KFPC.CurrentPerk.SetPrestigeLevel(PrestigeLevel);
 
