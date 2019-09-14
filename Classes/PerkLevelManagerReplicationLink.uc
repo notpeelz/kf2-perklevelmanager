@@ -36,7 +36,11 @@ simulated function PostBeginPlay()
     {
         SetTimer(1.f, true, nameof(UpdateSkills));
     }
-    else
+}
+
+function Initialize()
+{
+    if (WorldInfo.NetMode == NM_DedicatedServer)
     {
         SyncConfig();
     }
@@ -45,12 +49,6 @@ simulated function PostBeginPlay()
 function SyncConfig()
 {
     local PerkLevelManagerConfig.PerkOverride CurrentPerkOverride;
-
-    if (PLMMutator == None)
-    {
-        SetTimer(0.01f, false, nameof(SyncConfig));
-        return;
-    }
 
     foreach PLMMutator.PLMConfig.PerkLevelOverrides(CurrentPerkOverride)
     {

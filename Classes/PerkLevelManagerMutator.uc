@@ -135,6 +135,7 @@ function PerkLevelManagerReplicationLink CreateRepLink(KFPlayerController KFPC)
 
     RepLink = Spawn(class'PerkLevelManager.PerkLevelManagerReplicationLink', KFPC);
     RepLink.PLMMutator = Self;
+    RepLink.Initialize();
 
     return RepLink;
 }
