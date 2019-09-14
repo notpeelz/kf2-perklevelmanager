@@ -36,8 +36,7 @@ simulated function PostBeginPlay()
     {
         SetTimer(1.f, true, nameof(UpdateSkills));
     }
-
-    if (WorldInfo.NetMode != NM_Client)
+    else
     {
         SyncConfig();
     }
