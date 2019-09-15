@@ -247,8 +247,8 @@ simulated function bool CacheVariables()
     return true;
 }
 
-`ForcedObjectTypecastFunction(KFPlayerReplicationInfoProxy, CastPRIProxy)
-`ForcedObjectTypecastFunction(KFPerkProxy, CastPerkProxy)
+simulated `ForcedObjectTypecastFunction(KFPlayerReplicationInfoProxy, CastPRIProxy)
+simulated `ForcedObjectTypecastFunction(KFPerkProxy, CastPerkProxy)
 
 defaultproperties
 {
