@@ -1,5 +1,4 @@
-class PerkLevelManagerMutator extends KFMutator
-    dependson(PerkLevelManagerConfig);
+class PerkLevelManagerMutator extends KFMutator;
 
 struct ClientEntry
 {
@@ -9,7 +8,8 @@ struct ClientEntry
     var bool ShouldUpdateSkills;
 };
 
-var PerkLevelManagerConfig PLMConfig;
+var PerkLevelManagerConfig ServerConfig;
+var PerkLevelManagerClientConfig ClientConfig;
 var array<ClientEntry> Clients;
 var Name GameStateName;
 var byte PrestigeLevel;
@@ -18,15 +18,19 @@ var byte PerkLevel;
 replication
 {
     if (bNetDirty)
-        PLMConfig, GameStateName;
+        ClientConfig, GameStateName;
 }
 
 simulated function PostBeginPlay()
 {
     if (Role == ROLE_Authority)
     {
-        PLMConfig = Spawn(class'PerkLevelManager.PerkLevelManagerConfig', Self);
-        PLMConfig.Initialize();
+        ServerConfig = new class'PerkLevelManager.PerkLevelManagerConfig';
+        ServerConfig.Initialize();
+
+        ClientConfig = Spawn(class'PerkLevelManager.PerkLevelManagerClientConfig', Self);
+        ClientConfig.PLMMutator = Self;
+        ClientConfig.Initialize();
 
         SetTimer(1.f, true, nameof(UpdateInfo));
 
@@ -51,8 +55,8 @@ function UpdateInfo()
     {
         if (Client.KFPC.CurrentPerk == None || Client.KFPC.bWaitingForClientPerkData) continue;
 
-        ExpectedPerkLevel = PLMConfig.GetPerkLevel(Client.PRIProxy.ActivePerkLevel, Client.KFPC.CurrentPerk.Class);
-        ExpectedPrestigeLevel = PLMConfig.GetPrestigeLevel(Client.PRIProxy.ActivePerkPrestigeLevel, Client.KFPC.CurrentPerk.Class);
+        ExpectedPerkLevel = ClientConfig.GetPerkLevel(Client.PRIProxy.ActivePerkLevel, Client.KFPC.CurrentPerk.Class);
+        ExpectedPrestigeLevel = ClientConfig.GetPrestigeLevel(Client.PRIProxy.ActivePerkPrestigeLevel, Client.KFPC.CurrentPerk.Class);
         UnlockedTier = ExpectedPerkLevel / `MAX_PERK_SKILLS;
 
         if (Client.PRIProxy.ActivePerkLevel != ExpectedPerkLevel || Client.PRIProxy.ActivePerkPrestigeLevel != ExpectedPrestigeLevel)

@@ -50,12 +50,12 @@ function SyncConfig()
 {
     local PerkLevelManagerConfig.PerkOverride CurrentPerkOverride;
 
-    foreach PLMMutator.PLMConfig.PerkLevelOverrides(CurrentPerkOverride)
+    foreach PLMMutator.ClientConfig.PerkLevelOverrides(CurrentPerkOverride)
     {
         AddLevelPerkOverride(CurrentPerkOverride);
     }
 
-    foreach PLMMutator.PLMConfig.PrestigeLevelOverrides(CurrentPerkOverride)
+    foreach PLMMutator.ClientConfig.PrestigeLevelOverrides(CurrentPerkOverride)
     {
         AddPrestigePerkOverride(CurrentPerkOverride);
     }
@@ -80,20 +80,20 @@ reliable client function AddLevelPerkOverride(PerkLevelManagerConfig.PerkOverrid
     }
     else
     {
-        PLMMutator.PLMConfig.PerkLevelOverrides.AddItem(Override);
+        PLMMutator.ClientConfig.PerkLevelOverrides.AddItem(Override);
     }
 }
 
 reliable client function AddPrestigePerkOverride(PerkLevelManagerConfig.PerkOverride Override)
 {
-    if (PLMMutator == None || PLMMutator.PLMConfig == None)
+    if (PLMMutator == None || PLMMutator.ClientConfig == None)
     {
         TempPrestigeLevelOverrides.AddItem(Override);
         UpdateConfig();
     }
     else
     {
-        PLMMutator.PLMConfig.PrestigeLevelOverrides.AddItem(Override);
+        PLMMutator.ClientConfig.PrestigeLevelOverrides.AddItem(Override);
     }
 }
 
@@ -101,7 +101,7 @@ simulated function UpdateConfig()
 {
     local PerkLevelManagerConfig.PerkOverride CurrentPerkOverride;
 
-    if (PLMMutator == None || PLMMutator.PLMConfig == None)
+    if (PLMMutator == None || PLMMutator.ClientConfig == None)
     {
         ClearTimer(nameof(UpdateConfig));
         SetTimer(0.01f, false, nameof(UpdateConfig));
@@ -110,12 +110,12 @@ simulated function UpdateConfig()
 
     foreach TempPerkLevelOverrides(CurrentPerkOverride)
     {
-        PLMMutator.PLMConfig.PerkLevelOverrides.AddItem(CurrentPerkOverride);
+        PLMMutator.ClientConfig.PerkLevelOverrides.AddItem(CurrentPerkOverride);
     }
 
     foreach TempPrestigeLevelOverrides(CurrentPerkOverride)
     {
-        PLMMutator.PLMConfig.PrestigeLevelOverrides.AddItem(CurrentPerkOverride);
+        PLMMutator.ClientConfig.PrestigeLevelOverrides.AddItem(CurrentPerkOverride);
     }
 
     TempPerkLevelOverrides.Length = 0;
@@ -173,8 +173,8 @@ simulated function UpdateLevelInfo()
     for (I = 0; I < KFPC.PerkList.Length; I++)
     {
         PerkIndex = KFPC.GetPerkIndexFromClass(KFPC.PerkList[I].PerkClass);
-        KFPC.PerkList[PerkIndex].PerkLevel = PLMMutator.PLMConfig.GetPerkLevel(PerkListCache[PerkIndex].PerkLevel, KFPC.PerkList[PerkIndex].PerkClass);
-        KFPC.PerkList[PerkIndex].PrestigeLevel = PLMMutator.PLMConfig.GetPrestigeLevel(PerkListCache[PerkIndex].PrestigeLevel, KFPC.PerkList[PerkIndex].PerkClass);
+        KFPC.PerkList[PerkIndex].PerkLevel = PLMMutator.ClientConfig.GetPerkLevel(PerkListCache[PerkIndex].PerkLevel, KFPC.PerkList[PerkIndex].PerkClass);
+        KFPC.PerkList[PerkIndex].PrestigeLevel = PLMMutator.ClientConfig.GetPrestigeLevel(PerkListCache[PerkIndex].PrestigeLevel, KFPC.PerkList[PerkIndex].PerkClass);
     }
 
     KFPC.PostTierUnlock(KFPC.PerkList[KFPC.SavedPerkIndex].PerkClass);
