@@ -10,7 +10,7 @@ struct LevelOverride
 
 struct PerkOverride
 {
-    var Class<KFPerk> PerkClass;
+    var class<KFPerk> PerkClass;
     var LevelOverride Override;
 };
 
@@ -25,7 +25,7 @@ function Initialize()
     if (INIVersion == 0)
     {
         INIVersion = 1;
-        
+
         PerkLevel.Value = 25;
         PerkLevel.Min = -1;
         PerkLevel.Max = -1;

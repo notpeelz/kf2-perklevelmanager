@@ -14,7 +14,7 @@ var repnotify byte VOIPStatus;
 var repnotify bool bVOIPRegisteredWithOSS;
 var int DamageDealtOnTeam;
 var byte NetPerkIndex;
-var Class<KFPerk> CurrentPerkClass;
+var class<KFPerk> CurrentPerkClass;
 var /*private*/ byte ActivePerkLevel;
 var /*private*/ byte ActivePerkPrestigeLevel;
 var int Assists;

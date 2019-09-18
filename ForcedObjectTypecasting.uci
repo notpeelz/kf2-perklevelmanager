@@ -24,12 +24,12 @@ SOFTWARE.
 
 `define ForcedObjectTypecastFunction(ClassName, FunctionName) function `{ClassName} `{FunctionName} (Object Other)\
 {\
-	local string NewClassName, OldClassName;\
-	local `{ClassName} Result;\
-	NewClassName = PathName(class'`{ClassName}');\
-	OldClassName = PathName(Other.class);\
-	Other.ImportJSON("Class", NewClassName);\
-	Result = `{ClassName} (Other);\
-	Other.ImportJSON("Class", OldClassName);\
-	return Result;\
+    local string NewClassName, OldClassName;\
+    local `{ClassName} Result;\
+    NewClassName = PathName(class'`{ClassName}');\
+    OldClassName = PathName(Other.class);\
+    Other.ImportJSON("Class", NewClassName);\
+    Result = `{ClassName} (Other);\
+    Other.ImportJSON("Class", OldClassName);\
+    return Result;\
 }

@@ -23,6 +23,10 @@ replication
 
 simulated function PostBeginPlay()
 {
+    super.PostBeginPlay();
+
+    if (bDeleteMe) return;
+
     if (Role == ROLE_Authority)
     {
         ServerConfig = new class'PerkLevelManager.PerkLevelManagerConfig';

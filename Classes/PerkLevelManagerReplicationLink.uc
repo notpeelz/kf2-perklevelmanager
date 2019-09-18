@@ -32,6 +32,10 @@ replication
 
 simulated function PostBeginPlay()
 {
+    super.PostBeginPlay();
+
+    if (bDeleteMe) return;
+
     if (WorldInfo.NetMode != NM_DedicatedServer)
     {
         SetTimer(1.f, true, nameof(UpdateSkills));
@@ -73,7 +77,7 @@ reliable client function NotifyChangeLevel(byte CurrentPerkLevel, byte CurrentPr
 
 reliable client function AddLevelPerkOverride(PerkLevelManagerConfig.PerkOverride Override)
 {
-    if (PLMMutator == None)
+    if (PLMMutator == None || PLMMutator.ClientConfig == None)
     {
         TempPerkLevelOverrides.AddItem(Override);
         UpdateConfig();

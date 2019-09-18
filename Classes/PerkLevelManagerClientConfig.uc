@@ -22,7 +22,7 @@ function Initialize()
     PrestigeLevelOverrides = PLMMutator.ServerConfig.PrestigeLevelOverrides;
 }
 
-simulated function int GetPerkLevel(int CurrentValue, Class<KFPerk> PerkClass)
+simulated function int GetPerkLevel(int CurrentValue, class<KFPerk> PerkClass)
 {
     local int Value;
     local LevelOverride Override;
