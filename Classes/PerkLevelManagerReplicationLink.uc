@@ -30,18 +30,6 @@ replication
         PLMMutator;
 }
 
-simulated function PostBeginPlay()
-{
-    super.PostBeginPlay();
-
-    if (bDeleteMe) return;
-
-    if (WorldInfo.NetMode != NM_DedicatedServer)
-    {
-        SetTimer(1.f, true, nameof(UpdateSkills));
-    }
-}
-
 function Initialize()
 {
     if (WorldInfo.NetMode == NM_DedicatedServer)
