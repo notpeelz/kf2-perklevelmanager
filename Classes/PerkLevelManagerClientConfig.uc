@@ -1,5 +1,12 @@
 class PerkLevelManagerClientConfig extends ReplicationInfo
+    config(PerkLevelManager)
     dependson(PerkLevelManagerConfig);
+
+struct PerkSkillSelection
+{
+    var class<KFPerk> PerkClass;
+    var byte Skills[`MAX_PERK_SKILLS];
+};
 
 var PerkLevelManagerMutator PLMMutator;
 
@@ -7,6 +14,8 @@ var PerkLevelManagerConfig.LevelOverride PerkLevel;
 var PerkLevelManagerConfig.LevelOverride PrestigeLevel;
 var array<PerkLevelManagerConfig.PerkOverride> PerkLevelOverrides;
 var array<PerkLevelManagerConfig.PerkOverride> PrestigeLevelOverrides;
+
+var config array<PerkSkillSelection> PerkSkills;
 
 replication
 {

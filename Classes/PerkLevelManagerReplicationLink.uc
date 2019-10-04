@@ -1,5 +1,5 @@
 class PerkLevelManagerReplicationLink extends ReplicationInfo
-    dependson(PerkLevelManagerConfig);
+    dependson(PerkLevelManagerConfig,PerkLevelManagerClientConfig);
 
 struct PerkListCacheEntry
 {
@@ -8,17 +8,17 @@ struct PerkListCacheEntry
 };
 
 var PerkLevelManagerMutator PLMMutator;
-
 var KFPlayerController KFPC;
+
 var KFPlayerReplicationInfo KFPRI;
 var KFPlayerReplicationInfoProxy KFPRIProxy;
-
-var KFPerkProxy KFPerkProxy;
 
 var bool ShouldUpdate;
 var bool ShouldUpdateSkills;
 var byte PerkLevel;
 var byte PrestigeLevel;
+var KFPerkProxy PreviousPerkProxy;
+var class<KFPerk> PreviousPerkClass;
 
 var array<PerkLevelManagerConfig.PerkOverride> TempPerkLevelOverrides;
 var array<PerkLevelManagerConfig.PerkOverride> TempPrestigeLevelOverrides;
@@ -27,7 +27,7 @@ var array<PerkListCacheEntry> PerkListCache;
 replication
 {
     if (bNetDirty)
-        PLMMutator;
+        PLMMutator, KFPC;
 }
 
 function Initialize()
@@ -190,6 +190,8 @@ simulated function UpdateLevelInfo()
 simulated function UpdateSkills()
 {
     local int UnlockedTier;
+    local KFPerkProxy KFPerkProxy;
+    local byte SavedSkills[`MAX_PERK_SKILLS];
     local int I;
 
     if (KFPC.CurrentPerk == None) return;
@@ -199,6 +201,12 @@ simulated function UpdateSkills()
     KFPerkProxy = CastPerkProxy(KFPC.CurrentPerk);
     if (KFPerkProxy == None) return;
 
+    SavePreviousPerkSkills();
+    PreviousPerkProxy = KFPerkProxy;
+    PreviousPerkClass = KFPC.CurrentPerk.Class;
+
+    GetSavedSkills(KFPC.CurrentPerk.Class, SavedSkills);
+
     for (I = 0; I < `MAX_PERK_SKILLS; I++)
     {
         if (I >= UnlockedTier)
@@ -206,7 +214,13 @@ simulated function UpdateSkills()
             if (KFPerkProxy.SelectedSkills[I] != 0) ShouldUpdateSkills = true;
             KFPerkProxy.SelectedSkills[I] = 0;
         }
+        else
+        {
+            KFPerkProxy.SelectedSkills[I] = SavedSkills[I];
+        }
     }
+
+    ServerUpdateSkills(KFPC.CurrentPerk.Class, SavedSkills);
 
     if (ShouldUpdateSkills && PLMMutator.CanUpdateSkills())
     {
@@ -216,18 +230,70 @@ simulated function UpdateSkills()
     }
 }
 
+simulated function GetSavedSkills(class<KFPerk> PerkClass, out byte SavedSkills[`MAX_PERK_SKILLS])
+{
+    local int Index, I;
+
+    Index = PLMMutator.ClientConfig.PerkSkills.Find('PerkClass', PerkClass);
+    if (Index != INDEX_NONE)
+    {
+        for (I = 0; I < `MAX_PERK_SKILLS; I++)
+        {
+            SavedSkills[I] = PLMMutator.ClientConfig.PerkSkills[Index].Skills[I];
+        }
+    }
+}
+
+simulated function SavePreviousPerkSkills()
+{
+    local int Index;
+    local PerkLevelManagerClientConfig.PerkSkillSelection SkillSelection;
+    local int I;
+
+    if (PreviousPerkProxy == None) return;
+
+    `Log("[PerkLevelManager] Saving skill selection for" @ PreviousPerkClass);
+
+    SkillSelection.PerkClass = PreviousPerkClass;
+
+    for (I = 0; I < `MAX_PERK_SKILLS; I++)
+    {
+        SkillSelection.Skills[I] = PreviousPerkProxy.SelectedSkills[I];
+    }
+
+    Index = PLMMutator.ClientConfig.PerkSkills.Find('PerkClass', PreviousPerkClass);
+    if (Index != INDEX_NONE)
+    {
+        PLMMutator.ClientConfig.PerkSkills[Index] = SkillSelection;
+    }
+    else
+    {
+        PLMMutator.ClientConfig.PerkSkills.AddItem(SkillSelection);
+    }
+
+    PLMMutator.ClientConfig.SaveConfig();
+}
+
+reliable server function ServerUpdateSkills(class<KFPerk> PerkClass, byte Skills[`MAX_PERK_SKILLS])
+{
+    PLMMutator.UpdateClientSkills(KFPC, PerkClass, Skills);
+}
+
+simulated event Destroyed()
+{
+    if (WorldInfo.NetMode != NM_DedicatedServer)
+    {
+        SavePreviousPerkSkills();
+    }
+
+    super.Destroyed();
+}
+
 simulated function bool CacheVariables()
 {
-    local PlayerController PC;
-
     if (PLMMutator != None && KFPC != None && KFPRI != None && KFPRIProxy != None) return true;
 
     if (PLMMutator == None) return false;
-
-    PC = GetALocalPlayerController();
-    if (PC == None) return false;
-
-    KFPC = KFPlayerController(PC);
     if (KFPC == None) return false;
 
     KFPRI = KFPlayerReplicationInfo(KFPC.PlayerReplicationInfo);
@@ -248,4 +314,6 @@ defaultproperties
     bOnlyRelevantToOwner = true;
     Role = ROLE_Authority;
     RemoteRole = ROLE_SimulatedProxy;
+    // This is needed, otherwise the client-to-server RPC fails
+    bSkipActorPropertyReplication = false;
 }

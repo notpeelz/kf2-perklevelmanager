@@ -48,15 +48,17 @@ function UpdateInfo()
     local KFPerkProxy KFPerkProxy;
     local byte ExpectedPerkLevel, ExpectedPrestigeLevel;
     local int UnlockedTier;
-    local int I;
+    local int ClientIndex, I;
 
     if (MyKFGI != None)
     {
         GameStateName = MYKFGI.GetStateName();
     }
 
-    foreach Clients(Client)
+    for (ClientIndex = 0; ClientIndex < Clients.Length; ClientIndex++)
     {
+        Client = Clients[ClientIndex];
+
         if (Client.KFPC.CurrentPerk == None || Client.KFPC.bWaitingForClientPerkData) continue;
 
         ExpectedPerkLevel = ClientConfig.GetPerkLevel(Client.PRIProxy.ActivePerkLevel, Client.KFPC.CurrentPerk.Class);
@@ -65,7 +67,7 @@ function UpdateInfo()
 
         if (Client.PRIProxy.ActivePerkLevel != ExpectedPerkLevel || Client.PRIProxy.ActivePerkPrestigeLevel != ExpectedPrestigeLevel)
         {
-            `Log("[PerkLevelManager] Client" @ Client.KFPC.PlayerReplicationInfo.PlayerName @ "doesn't match the expected level; updating levels.");
+            `Log("[PerkLevelManager] Updating client" @ Client.KFPC.PlayerReplicationInfo.PlayerName @ "from (" $ Client.PRIProxy.ActivePerkPrestigeLevel $ "," @ Client.PRIProxy.ActivePerkLevel $ ") to (" $ ExpectedPrestigeLevel $ "," @ ExpectedPerkLevel $ ")");
 
             Client.RepLink.NotifyChangeLevel(
                 Client.PRIProxy.ActivePerkLevel, Client.PRIProxy.ActivePerkPrestigeLevel,
@@ -87,17 +89,17 @@ function UpdateInfo()
             {
                 if (I >= UnlockedTier)
                 {
-                    if (KFPerkProxy.SelectedSkills[I] != 0) Client.ShouldUpdateSkills = true;
+                    if (KFPerkProxy.SelectedSkills[I] != 0) Clients[ClientIndex].ShouldUpdateSkills = true;
                     KFPerkProxy.SelectedSkills[I] = 0;
                 }
             }
         }
 
-        if (Client.ShouldUpdateSkills && CanUpdateSkills())
+        if (Clients[ClientIndex].ShouldUpdateSkills && CanUpdateSkills())
         {
-            `Log("[PerkLevelManager] Client" @ Client.KFPC.PlayerReplicationInfo.PlayerName @ "has illegal skills; updating skills.");
+            `Log("[PerkLevelManager] Updating skills for client" @ Client.KFPC.PlayerReplicationInfo.PlayerName);
             Client.KFPC.CurrentPerk.UpdateSkills();
-            CLient.ShouldUpdateSkills = false;
+            Clients[ClientIndex].ShouldUpdateSkills = false;
         }
     }
 }
@@ -143,9 +145,50 @@ function PerkLevelManagerReplicationLink CreateRepLink(KFPlayerController KFPC)
 
     RepLink = Spawn(class'PerkLevelManager.PerkLevelManagerReplicationLink', KFPC);
     RepLink.PLMMutator = Self;
+    RepLink.KFPC = KFPC;
     RepLink.Initialize();
 
     return RepLink;
+}
+
+function UpdateClientSkills(KFPlayerController KFPC, class<KFPerk> PerkClass, byte Skills[`MAX_PERK_SKILLS])
+{
+    local KFPerkProxy KFPerkProxy;
+    local int ClientIndex, I;
+
+    ClientIndex = Clients.Find('KFPC', KFPC);
+    if (ClientIndex == INDEX_NONE)
+    {
+        `Warn("[PerkLevelManager] UpdateClientSkills :: Attempted updating client skills of an unregistered KFPC (???)");
+        return;
+    }
+
+    if (Clients[ClientIndex].KFPC.CurrentPerk == None || Clients[ClientIndex].KFPC.CurrentPerk.Class != PerkClass)
+    {
+        `Warn(
+            "[PerkLevelManager] UpdateClientSkills :: Failed updating client skills; perk mismatch, expected:"
+            @ PerkClass
+            $ ", Actual:"
+            @ (Clients[ClientIndex].KFPC.CurrentPerk == None ? "None" : string(Clients[ClientIndex].KFPC.CurrentPerk.Class))
+        );
+        return;
+    }
+
+    KFPerkProxy = CastPerkProxy(Clients[ClientIndex].KFPC.CurrentPerk);
+
+    if (KFPerkProxy == None)
+    {
+        `Warn("[PerkLevelManager] UpdateClientSkills :: Failed casting perk proxy");
+        return;
+    }
+
+    for (I = 0; I < `MAX_PERK_SKILLS; I++)
+    {
+        KFPerkProxy.SelectedSkills[I] = Skills[I];
+    }
+
+    `Log("[PerkLevelManager] UpdateClientSkills :: Queuing skills update for client" @ Clients[ClientIndex].KFPC.PlayerReplicationInfo.PlayerName);
+    Clients[ClientIndex].ShouldUpdateSkills = true;
 }
 
 `ForcedObjectTypecastFunction(KFPlayerReplicationInfoProxy, CastPRIProxy)
