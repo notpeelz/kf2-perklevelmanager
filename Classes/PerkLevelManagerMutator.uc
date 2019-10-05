@@ -69,11 +69,6 @@ function UpdateInfo()
         {
             `Log("[PerkLevelManager] Updating client" @ Client.KFPC.PlayerReplicationInfo.PlayerName @ "from (" $ Client.PRIProxy.ActivePerkPrestigeLevel $ "," @ Client.PRIProxy.ActivePerkLevel $ ") to (" $ ExpectedPrestigeLevel $ "," @ ExpectedPerkLevel $ ")");
 
-            Client.RepLink.NotifyChangeLevel(
-                Client.PRIProxy.ActivePerkLevel, Client.PRIProxy.ActivePerkPrestigeLevel,
-                ExpectedPerkLevel, ExpectedPrestigeLevel
-            );
-
             Client.KFPC.CurrentPerk.SetLevel(ExpectedPerkLevel);
             Client.KFPC.CurrentPerk.SetPrestigeLevel(ExpectedPrestigeLevel);
 
